@@ -16,6 +16,8 @@ parser.add_argument('n_eval', type=int, help='maximum number of evaluations', de
 parser.add_argument('parameters', nargs='*', help='tunable parameters')
 
 args = parser.parse_args()
+if not os.path.exists(args.name):
+    os.makedirs(args.name)
 if args.parameters == []:
 	args.parameters = ['tlb_hit_latency', 'tlb_miss_latency', 'tlb_page_size', 'tlb_entries', 'tlb_bandwidth', 'tlb_max_outstanding_walks']
 
@@ -44,8 +46,10 @@ def f(x):
 	params = {}
 	for p, v in zip(args.parameters, x):
 		params[p] = v
-	cycle, power, area = evaluate(params, args.name, eval_counter)
-	eval_counter += 1
+	try:
+            cycle, power, area = evaluate(params, args.name, eval_counter)
+        finally:
+            eval_counter += 1
 	return np.array([cycle, power])    
 	
 

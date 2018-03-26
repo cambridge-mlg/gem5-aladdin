@@ -1,6 +1,10 @@
 import numpy as np
 
 
+class InvalidParameters(Exception):
+    pass
+
+
 def shift(frontier, mean, std):
     frontier_copy = frontier.copy()
     frontier_copy -= mean[None, :]

@@ -1,6 +1,8 @@
 import os
 import sys
 import re
+from shutil import copyfile
+from optimizer.optimizer_helper import InvalidParameters
 sys.path.append('/workspace/gem5-aladdin/sweeps')
 
 TASK_NAME='ffttranspose'
@@ -15,7 +17,13 @@ def evaluate(params, dir, counter):
     os.chdir('/workspace/gem5-aladdin/bo_script')
     os.system('sh {0}/evaluation_{1}/{2}/0/run.sh'.format(dir, counter, TASK_NAME))
     
-    return get_cycle_power_area('{0}/evaluation_{1}/{2}/0/outputs/stdout'.format(dir, counter, TASK_NAME))
+    try:
+        return get_cycle_power_area('{0}/evaluation_{1}/{2}/0/outputs/stdout'.format(dir, counter, TASK_NAME))
+    except:
+        if not os.path.exists('{0}/errors'.format(dir)):
+            os.makedirs('{0}/errors'.format(dir))
+        copyfile('{0}/evaluation_{1}/{2}/0/outputs/stderr'.format(dir, counter, TASK_NAME), '{0}/errors/stderr_{1}'.format(dir, counter))
+        raise InvalidParameters
 
 def get_cycle_power_area(output_file):
     cycle = [re.findall(r'Cycle : (.*) cycles',line) for line in open(output_file)]
