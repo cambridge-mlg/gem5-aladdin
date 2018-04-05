@@ -14,6 +14,7 @@ def optimize(f,
              num_init,
              num_max,
              reference_point,
+             batch_size=1,
              output_dir=None,
              plots=False):
 
@@ -66,25 +67,27 @@ def optimize(f,
     for iter in range(0, num_max):
         print('Iteration {0}'.format(iter))
 
-        aquisition_values = aquisition_function.getAquisitionBatch(candidates, model, frontier)
-        max_aquisition_index = np.argmax(aquisition_values)
-        new_point = candidates[max_aquisition_index]
-        try:
-            new_point_value = np.reshape(np.array(f(new_point)), (1, -1))
-            current_points = np.vstack((new_point, current_points))
-        except InvalidParameters:
-            iter -= 1
-            print('Invalid Parameters')
-        finally:
+	eval_points = []
+	for b in range(batch_size):
+            aquisition_values = aquisition_function.getAquisitionBatch(candidates, model, frontier)
+            max_aquisition_index = np.argmax(aquisition_values)
+            new_point = candidates[max_aquisition_index]
+	    eval_points.append(new_point)
+            model.addPseudoPoint(new_point)
             candidates = np.delete(candidates, max_aquisition_index, 0)
-        
-        print('   New point at {0} with value {1}, {2}'.format(new_point, new_point_value, shift(new_point_value[None, :], init_values_mean, init_values_std)))
 
-        model_update_start = time.time()
-        model.addPoint(new_point, new_point_value)
-        print('   Model updated in {0}'.format(time.time() - model_update_start))
+	model.removePseudoPoints()
 
-        frontier = find_frontier(np.vstack((new_point_value, frontier)))
+	# Parallelize this
+        for ep in eval_points:
+	    try:
+                new_point_value = np.reshape(np.array(f(ep)), (1, -1))
+                current_points = np.vstack((ep, current_points))
+                model.addPoint(ep, new_point_value)
+                frontier = find_frontier(np.vstack((new_point_value, frontier)))
+            except InvalidParameters:
+                print('Invalid Parameters')
+
         hv_over_iterations.append(aquisition_function.get_hypervolume(frontier, reference_point))
         print('   Hypervolume improved from {0} to {1}'.format(hv_over_iterations[-2], hv_over_iterations[-1]))
 

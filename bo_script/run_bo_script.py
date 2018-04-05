@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import random
 import sys
+import os
 import argparse
 import itertools
 sys.path.append("./")
@@ -12,14 +13,16 @@ from optimizer.aquisition.aquisition_param import AquisitionParam
 
 parser = argparse.ArgumentParser(description='Run Bayesian Optimization')
 parser.add_argument('name', help='name of experiment')
-parser.add_argument('n_eval', type=int, help='maximum number of evaluations', default=10)
+parser.add_argument('n_eval', type=int, help='maximum number of iterations', default=10)
+parser.add_argument('n_batch', type=int, help='number of parallel evaluations', default=1)
 parser.add_argument('parameters', nargs='*', help='tunable parameters')
 
 args = parser.parse_args()
 if not os.path.exists(args.name):
     os.makedirs(args.name)
 if args.parameters == []:
-	args.parameters = ['tlb_hit_latency', 'tlb_miss_latency', 'tlb_page_size', 'tlb_entries', 'tlb_bandwidth', 'tlb_max_outstanding_walks']
+    # args.parameters = ['cache_size', 'cache_assoc', 'cache_hit_latency', 'cache_line_sz', 'cache_queue_size', 'cache_bandwidth']
+    args.parameters = ['tlb_entries', 'tlb_hit_latency', 'tlb_miss_latency', 'tlb_page_size', 'tlb_assoc', 'tlb_bandwidth', 'tlb_max_outstanding_walks']
 
 param_sweeps={
 	'cycle_time': range(1, 6),
@@ -32,8 +35,13 @@ param_sweeps={
 	'tlb_page_size': [4096, 8192],
 	'tlb_assoc': [4, 8, 16],
 	'tlb_bandwidth': [1, 2],
-	'tlb_max_outstanding_walks': [4, 8]
-	# TODO add more
+	'tlb_max_outstanding_walks': [4, 8],
+        'cache_size': [16384, 32768, 65536, 131072],
+        'cache_assoc': [1, 2, 4, 8, 16],
+        'cache_hit_latency': range(1, 5),
+        'cache_line_sz': [16, 32, 64, 128],
+        'cache_queue_size': range(32, 129),
+        'cache_bandwidth': range(4, 17)
 }
 
 grid = np.array(list(itertools.product(*[param_sweeps[p] for p in args.parameters])))
@@ -62,6 +70,7 @@ frontier, curve = optimize(f,
                            AquisitionParam('smsego', aquisition_params),
                            np.min((10, int(args.n_eval*0.1) + 1)),
                            args.n_eval,
-                           np.array([2.0, 2.0]))
+                           np.array([2.0, 2.0]),
+			   args.n_batch)
 
 print('Final curve: {0}'.format(curve))

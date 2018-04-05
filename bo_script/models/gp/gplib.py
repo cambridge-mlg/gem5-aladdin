@@ -14,6 +14,7 @@ class GPlib(AbstractModel):
         self.data_mean = np.mean(training_data, axis=0)
         self.data_std = np.std(training_data, axis=0) + 1e-10
 	self.training_data = (training_data - self.data_mean) / self.data_std
+	self.pseudo_points = 0
 	
         self.targets_mean = np.mean(training_targets, axis=0)
         self.targets_std = np.std(training_targets, axis=0) + 1e-10
@@ -28,7 +29,8 @@ class GPlib(AbstractModel):
 
         self.models = []
         self.train()
-        
+
+
     def train(self):
         self.models = []
         for i in range(0, self.output_d):
@@ -44,8 +46,24 @@ class GPlib(AbstractModel):
             model.optimize(messages=False)
             self.models.append(model)
 
+    def addPseudoPoint(self, x):
+	self.training_data = np.vstack((x, self.training_data))
+	self.training_targets = np.vstack((np.zeros((self.output_d)), self.training_targets))
+        for i, model in enumerate(self.models):
+            self.training_targets[-1:, i:i+1], vars = model.predict(np.reshape(x, (1, -1)), full_cov=False)
+	    model.set_XY(self.training_data, self.training_targets[:, i:i+1])
+	self.pseudo_points += 1
+
+    def removePseudoPoints(self):
+	self.training_data = self.training_data[:-self.pseudo_points, :]
+	self.training_targets = self.training_targets[:-self.pseudo_points, :]
+        for i, model in enumerate(self.models):
+	    model.set_XY(self.training_data, self.training_targets[:, i:i+1])
+	self.pseudo_points = 0
+
     def addPoint(self, x, y):
-        self.training_data = np.vstack(((x - self.data_mean) / self.data_std, self.training_data))
+        assert self.pseudo_points == 0
+	self.training_data = np.vstack(((x - self.data_mean) / self.data_std, self.training_data))
         self.training_targets = np.vstack(((y - self.targets_mean) / self.targets_std, self.training_targets))
         self.train()
 
