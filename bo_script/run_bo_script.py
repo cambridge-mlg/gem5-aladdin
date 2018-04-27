@@ -21,8 +21,8 @@ args = parser.parse_args()
 if not os.path.exists(args.name):
     os.makedirs(args.name)
 if args.parameters == []:
-    # args.parameters = ['cache_size', 'cache_assoc', 'cache_hit_latency', 'cache_line_sz', 'cache_queue_size', 'cache_bandwidth']
-    args.parameters = ['tlb_entries', 'tlb_hit_latency', 'tlb_miss_latency', 'tlb_page_size', 'tlb_assoc', 'tlb_bandwidth', 'tlb_max_outstanding_walks']
+    args.parameters = ['pipelining', 'pipelined_dma', 'enable_l2', 'cache_queue_size', 'cache_size', 'cache_assoc', 'cache_hit_latency', 'cache_line_sz', 'cache_bandwidth']
+    # args.parameters = ['enable_l2', 'tlb_miss_latency', 'tlb_page_size', 'tlb_assoc', 'tlb_bandwidth', 'tlb_max_outstanding_walks']
 
 param_sweeps={
 	'cycle_time': range(1, 6),
@@ -39,8 +39,8 @@ param_sweeps={
         'cache_size': [16384, 32768, 65536, 131072],
         'cache_assoc': [1, 2, 4, 8, 16],
         'cache_hit_latency': range(1, 5),
-        'cache_line_sz': [16, 32, 64, 128],
-        'cache_queue_size': range(32, 129),
+        'cache_line_sz': [16, 32, 64],
+        'cache_queue_size': [32, 64, 128],
         'cache_bandwidth': range(4, 17)
 }
 
@@ -64,13 +64,15 @@ def f(x):
 model_params = {}
 aquisition_params = {}
 
-frontier, curve = optimize(f,
+frontier, curve, points = optimize(f,
                            grid,
                            ModelParam('gp', model_params),
                            AquisitionParam('smsego', aquisition_params),
-                           np.min((10, int(args.n_eval*0.1) + 1)),
+                           10,
                            args.n_eval,
                            np.array([2.0, 2.0]),
 			   args.n_batch)
 
+np.savetxt('{}/hv.txt'.format(args.name), curve)
+np.savetxt('{}/points.txt'.format(args.name), points)
 print('Final curve: {0}'.format(curve))

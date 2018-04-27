@@ -5,17 +5,19 @@ from shutil import copyfile
 from optimizer.optimizer_helper import InvalidParameters
 sys.path.append('/workspace/gem5-aladdin/sweeps')
 
-TASK_NAME='ffttranspose'
+TASK_NAME='fft-transpose'
 
 def evaluate(params, dir, counter):
 
     create_header_from_template(params,
                                 '/workspace/gem5-aladdin/sweeps/benchmarks/header_{0}_{1}.xe'.format(dir, counter),
                                 '{0}/evaluation_{1}'.format(dir, counter))
+    os.system('cp -r /workspace/gem5-aladdin/bo_script/traces {0}/evaluation_{1}/'.format(dir, counter))
     os.chdir('/workspace/gem5-aladdin/sweeps')
     os.system('python generate_design_sweeps.py benchmarks/header_{0}_{1}.xe'.format(dir, counter))
+    os.chdir('/workspace/gem5-aladdin/bo_script/{0}/evaluation_{1}/{2}/0/'.format(dir, counter, TASK_NAME))
+    os.system('sh run.sh'.format(dir, counter, TASK_NAME))
     os.chdir('/workspace/gem5-aladdin/bo_script')
-    os.system('sh {0}/evaluation_{1}/{2}/0/run.sh'.format(dir, counter, TASK_NAME))
     
     try:
         return get_cycle_power_area('{0}/evaluation_{1}/{2}/0/outputs/stdout'.format(dir, counter, TASK_NAME))
