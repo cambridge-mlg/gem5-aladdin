@@ -22,7 +22,7 @@ class SMSego(AbstractAquisition):
         means = means[0, :, :]
         vars = vars[0, :, :]
 
-        pot_sol = means - self.gain * np.sqrt(vars)
+        pot_sol = means - self.gain * np.sqrt(np.maximum(vars, 1e-10))
         
         hv_frontier = self.get_hypervolume(frontier, self.reference_point)
         aquisitions = np.ones((n_points))

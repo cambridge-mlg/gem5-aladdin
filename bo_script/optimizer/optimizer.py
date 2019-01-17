@@ -23,12 +23,14 @@ def optimize(f,
     # Points of the initial evaluations
     init_index = []
     init_values = []
+    np.random.seed(69420)
     for i in range(num_init):
         index = np.random.randint(0, candidates.shape[0])
         try:
             value = f(candidates[index, :])
             init_index.append(index)
             init_values.append(value)
+            print(value)
         except InvalidParameters:
             i -= 1	
     init_points = candidates[init_index, :]
@@ -63,16 +65,20 @@ def optimize(f,
     # Iteration
     print('Iterating')
     current_points = init_points.copy()
-
-    for iter in range(0, num_max):
+    current_values = init_values.copy()
+    iter = 0
+    while iter < num_max:
+        iter += 1
         print('Iteration {0}'.format(iter))
 
 	eval_points = []
 	for b in range(batch_size):
+            print('Selecting highest aq value')
             aquisition_values = aquisition_function.getAquisitionBatch(candidates, model, frontier)
             max_aquisition_index = np.argmax(aquisition_values)
             new_point = candidates[max_aquisition_index]
 	    eval_points.append(new_point)
+            print('Adding new pseudo point')
             model.addPseudoPoint(new_point)
             candidates = np.delete(candidates, max_aquisition_index, 0)
 
@@ -81,16 +87,21 @@ def optimize(f,
 	# Parallelize this
         for ep in eval_points:
 	    try:
+                print('Evaluating point')
                 new_point_value = np.reshape(np.array(f(ep)), (1, -1))
+                current_values = np.vstack((new_point_value, current_values))
+                print(new_point_value)
                 current_points = np.vstack((ep, current_points))
+                print('Updating model')
                 model.addPoint(ep, new_point_value)
                 frontier = find_frontier(np.vstack((new_point_value, frontier)))
             except InvalidParameters:
+                iter -= 1
                 print('Invalid Parameters')
 
         hv_over_iterations.append(aquisition_function.get_hypervolume(frontier, reference_point))
         print('   Hypervolume improved from {0} to {1}'.format(hv_over_iterations[-2], hv_over_iterations[-1]))
-
+   
     print('The final Hypervolume is {0}'.format(hv_over_iterations[-1]))
-    return frontier, np.array(hv_over_iterations)
+    return frontier, np.array(hv_over_iterations), np.array(current_values)
 
